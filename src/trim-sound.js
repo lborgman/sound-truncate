@@ -7,8 +7,8 @@ const path = require("path");
 
 /**
  * Copies the first `duration` seconds of an MP3 to a new file.
- * @param {string} inputPath  - Path to the source MP3 file
- * @param {string} outputPath - Path for the trimmed MP3 file
+ * @param {string} inputPath  - Path to the source sound file
+ * @param {string} outputPath - Path for the trimmed sound file
  * @param {number} start      - Seconds to start (default: 0)
  * @param {number} duration   - Seconds to keep (default: 10)
  */
