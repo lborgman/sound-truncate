@@ -1,0 +1,1 @@
+wsl node ../src/trim-media.mjs pixabay pixabay/out
