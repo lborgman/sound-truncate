@@ -1,8 +1,72 @@
 // @ts-check
 
+
+import { version } from 'node:process';
+console.log('Actual Node.js version:', version);
+
 import { execFile } from "child_process";
 import path from "path";
+// console.log("my name", path.basename(import.meta.url));
 import fs from "fs";
+
+import { styleText } from 'node:util';
+
+//#region STyled logging
+////////////////////////////////////////////////////
+/////// Styled logging with line number in this file
+////////////////////////////////////////////////////
+/** @typedef {(...args: any[]) => void} StyledLogger */
+/** @type {StyledLogger} */
+function logRed(...args) { const fun = (text) => styleText("red", text); logLineStyled(fun, ...args); }
+/** @type {StyledLogger} */
+function logGreen(...args) { const fun = (text) => styleText("green", text); logLineStyled(fun, ...args); }
+/** @type {StyledLogger} */
+function logYellow(...args) { const fun = (text) => styleText("yellow", text); logLineStyled(fun, ...args); }
+/** @type {StyledLogger} */
+function logBlue(...args) { const fun = (text) => styleText("blueBright", text); logLineStyled(fun, ...args); }
+
+/**
+ * Logs a styled message with a line prefix.
+ * @param {StyledLogger} funStyle - Function that applies styling to text
+ * @param {...any} args - Arguments to log after the styled prefix
+ */
+function logLineStyled(funStyle, ...args) {
+  console.log(funStyle(getLine() + ":"), ...args);
+}
+
+let debugGetLine = false;
+function logDebugGetLine(...args) {
+  if (!debugGetLine) return;
+  console.log("LOG-DEBUG-GL: ", ...args);
+}
+function getLine() {
+  try {
+    throw Error("getLine");
+  } catch (err) {
+    const stack = err.stack;
+    const arr = stack.split("\n");
+    let iFile = -1;
+    for (let i = 0; i < arr.length; i++) {
+      const arr2 = arr[i].trim();
+      logDebugGetLine("arr2", i, arr2);
+      if (arr2.startsWith("at file:/")) {
+        logDebugGetLine({ iFile });
+        iFile = i;
+        break;
+      }
+    }
+    iFile = 4;
+    const arr2 = arr[iFile].trim();
+    const re = /:(\d+):\d+/;
+    const m = arr2.match(re);
+    const lineNum = m[1];
+    return lineNum;
+  }
+}
+//#endregion
+
+// console.log(chalk.blue("trim-media.mjs loading...\n"));
+console.log(styleText(["blueBright", "bold"], "trim-media.mjs loading...\n"));
 
 // --- CLI ---
 const [input, output, startArg, durationArg] = process.argv.slice(2);
@@ -24,6 +88,7 @@ const ext = (f) => path.extname(f).toLowerCase();
  * @param {number|null} end  - End time in seconds, or null to trim to end of file
  */
 function trimFile(inputPath, outputPath, start = 0, end = null) {
+  logGreen("trimFile", { start, end });
   const duration = end !== null ? end - start : null;
   const sameFormat = ext(inputPath) === ext(outputPath);
 
@@ -37,6 +102,8 @@ function trimFile(inputPath, outputPath, start = 0, end = null) {
   ];
 
   return new Promise((resolve, reject) => {
+    // console.warn("WARN execFile ffmpeg:", { args });
+    logYellow("execFile ffmpeg:", args.map(a => a.slice(0, 8)).join(" "));
     execFile("ffmpeg", args, (error, _stdout, stderr) => {
       if (error) {
         reject(new Error(`ffmpeg error on ${inputPath}: ${stderr || error.message}`));
@@ -51,7 +118,7 @@ let strOptionsForFiles;
 const optionsFilename = path.join(input, "../AAAoptions.txt");
 try {
   strOptionsForFiles = fs.readFileSync(optionsFilename, 'utf8');
-  console.log(strOptionsForFiles);
+  logBlue(strOptionsForFiles);
 } catch (err) {
   console.warn(err);
   strOptionsForFiles = "";
@@ -101,7 +168,7 @@ function writeIndexFile(dir, filenames) {
  * @param {number} start     - Start time in seconds (default: 0)
  * @param {number|null} duration  - End time in seconds, or null for end of file
  */
-async function trimMedia(input, output, start = 0, duration = null) {
+async function trimMedia(input, output, start = 0, duration = 10) {
   const inputStat = fs.statSync(input);
 
   if (inputStat.isDirectory()) {
@@ -120,13 +187,21 @@ async function trimMedia(input, output, start = 0, duration = null) {
 
 
     for (const filename of entries) {
-      let startSound = start;
-      const rowOption = getFileOptionsRow(filename);
-      if (!rowOption) {
+      const oldRowOption = getFileOptionsRow(filename);
+      // debugGetLine = true;
+      logGreen("oldRowOption: ", oldRowOption);
+      debugGetLine = false;
+      if (!oldRowOption) {
         arrOptionsForFiles.push([filename, "0", ""].join(divider));
       } else {
 
       }
+      const rowOption = getFileOptionsRow(filename);
+      if (!rowOption) throw Error(`rowOption == "${rowOption}"`);
+      const [_fn, startOpt, _ui] = rowOption.split(";;");
+      logGreen("startOpt", startOpt);
+
+      let startSound = startOpt;
 
       const inputFile = path.join(input, filename);
       const outputFile = path.join(output, filename);

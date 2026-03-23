@@ -1,0 +1,24 @@
+{
+  "name": "sound-truncate",
+  "version": "1.0.0",
+  "description": "I wrote this to truncate some ©-free [sound effect files from pixabay](https://pixabay.com/sound-effects/).",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lborgman/sound-truncate.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/lborgman/sound-truncate/issues"
+  },
+  "homepage": "https://github.com/lborgman/sound-truncate#readme",
+  "dependencies": {
+    "chalk": "^5.6.2"
+  }
+}
