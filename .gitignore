@@ -7,5 +7,4 @@
 *.wav
 node_modules/
 sounds/pixabay/out/
-sounds/pixabay/out/index-files.mjs
 sounds/temp.mjs
