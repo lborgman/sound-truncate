@@ -2,7 +2,7 @@
 
 
 import { version } from 'node:process';
-console.log('Actual Node.js version:', version);
+// console.log('Actual Node.js version:', version);
 
 import { execFile } from "child_process";
 import path from "path";
@@ -11,9 +11,11 @@ import fs from "fs";
 
 import { styleText } from 'node:util';
 
-//#region STyled logging
+
+
+//#region Styled logging with line numbers
 ////////////////////////////////////////////////////
-/////// Styled logging with line number in this file
+/////// Styled logging with line numbers
 ////////////////////////////////////////////////////
 /** @typedef {(...args: any[]) => void} StyledLogger */
 /** @type {StyledLogger} */
@@ -34,12 +36,17 @@ function logLineStyled(funStyle, ...args) {
   console.log(funStyle(getLine() + ":"), ...args);
 }
 
-let debugGetLine = false;
-function logDebugGetLine(...args) {
-  if (!debugGetLine) return;
-  console.log("LOG-DEBUG-GL: ", ...args);
+let traceLine = false;
+function traceNextGetLine() {
+  traceLine = true;
+}
+function logTraceLine(...args) {
+  console.log("TRACE ", ...args);
 }
 function getLine() {
+  const ourTraceLine = traceLine;
+  traceLine = false;
+  // console.log({ ourTraceLine });
   try {
     throw Error("getLine");
   } catch (err) {
@@ -48,10 +55,10 @@ function getLine() {
     let iFile = -1;
     for (let i = 0; i < arr.length; i++) {
       const arr2 = arr[i].trim();
-      logDebugGetLine("arr2", i, arr2);
+      if (ourTraceLine) { logTraceLine(`${i}: ${arr2}`); }
       if (arr2.startsWith("at file:/")) {
-        logDebugGetLine({ iFile });
         iFile = i;
+        if (ourTraceLine) { logTraceLine({ iFile }); }
         break;
       }
     }
@@ -60,13 +67,17 @@ function getLine() {
     const re = /:(\d+):\d+/;
     const m = arr2.match(re);
     const lineNum = m[1];
+    if (ourTraceLine) {
+      return `traced ${lineNum}`;
+    }
     return lineNum;
   }
 }
 //#endregion
 
-// console.log(chalk.blue("trim-media.mjs loading...\n"));
-console.log(styleText(["blueBright", "bold"], "trim-media.mjs loading...\n"));
+
+
+console.log(styleText("blueBright underline".split(" "), "trim-media.mjs loading...\n"));
 
 // --- CLI ---
 const [input, output, startArg, durationArg] = process.argv.slice(2);
@@ -87,9 +98,10 @@ const ext = (f) => path.extname(f).toLowerCase();
  * @param {number} start     - Start time in seconds (default: 0)
  * @param {number|null} end  - End time in seconds, or null to trim to end of file
  */
-function trimFile(inputPath, outputPath, start = 0, end = null) {
-  logGreen("trimFile", { start, end });
-  const duration = end !== null ? end - start : null;
+function trimFile(inputPath, outputPath, start = 0, duration = null) {
+  // traceNextGetLine();
+  logGreen("trimFile", { start, duration });
+  // const duration = end !== null ? end - start : null;
   const sameFormat = ext(inputPath) === ext(outputPath);
 
   const args = [
@@ -100,6 +112,7 @@ function trimFile(inputPath, outputPath, start = 0, end = null) {
     ...(sameFormat ? ["-acodec", "copy"] : []),
     outputPath,
   ];
+  logBlue("ffmpeg", { args });
 
   return new Promise((resolve, reject) => {
     // console.warn("WARN execFile ffmpeg:", { args });
@@ -169,6 +182,7 @@ function writeIndexFile(dir, filenames) {
  * @param {number|null} duration  - End time in seconds, or null for end of file
  */
 async function trimMedia(input, output, start = 0, duration = 10) {
+  logBlue("trimMedia", { start, duration });
   const inputStat = fs.statSync(input);
 
   if (inputStat.isDirectory()) {
@@ -188,9 +202,7 @@ async function trimMedia(input, output, start = 0, duration = 10) {
 
     for (const filename of entries) {
       const oldRowOption = getFileOptionsRow(filename);
-      // debugGetLine = true;
       logGreen("oldRowOption: ", oldRowOption);
-      debugGetLine = false;
       if (!oldRowOption) {
         arrOptionsForFiles.push([filename, "0", ""].join(divider));
       } else {
@@ -205,6 +217,7 @@ async function trimMedia(input, output, start = 0, duration = 10) {
 
       const inputFile = path.join(input, filename);
       const outputFile = path.join(output, filename);
+      logBlue("before trimFile", { startSound, duration });
       await trimFile(inputFile, outputFile, startSound, duration);
       console.log(`Trimmed: ${filename}`);
       outputFiles.push(filename);
@@ -238,7 +251,7 @@ async function trimMedia(input, output, start = 0, duration = 10) {
 
 
 const start = startArg ? parseFloat(startArg) : 0;
-const duration = durationArg ? parseFloat(durationArg) : null;
+const duration = durationArg ? parseFloat(durationArg) : 10;
 
 trimMedia(path.resolve(input), path.resolve(output), start, duration).catch((err) => {
   console.error("Error:", err.message);
